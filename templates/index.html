@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Multilingual Health Chatbot</title>
+    <style>
+        body { font-family: Arial; background-color: #f7f7f7; display:flex; justify-content:center; align-items:center; height:100vh; }
+        .chatbox { width: 500px; background:white; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1); display:flex; flex-direction:column; }
+        .messages { flex:1; padding:20px; overflow-y:auto; min-height:300px; }
+        .message { margin-bottom:15px; line-height:1.4; }
+        .user { text-align:right; color:#333; }
+        .bot { text-align:left; color:#555; }
+        .input-box { display:flex; border-top:1px solid #ddd; }
+        select, input, button { font-size:14px; padding:12px; border:none; }
+        select { border-radius:10px 0 0 0; }
+        input { flex:1; }
+        button { background:#4CAF50; color:white; cursor:pointer; border-radius:0 0 10px 0; }
+        .progress-container { height:5px; background:#eee; width:100%; }
+        .progress-bar { height:5px; background:#4CAF50; width:0%; }
+    </style>
+</head>
+<body>
+<div class="chatbox">
+    <div class="messages" id="chat-messages"></div>
+    <div class="progress-container">
+        <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="input-box">
+        <select id="language-select">
+            <option value="en">English</option>
+            <option value="hi">हिन्दी</option>
+            <option value="kn">ಕನ್ನಡ</option>
+        </select>
+        <input type="text" id="user-input" placeholder="">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<script>
+const userId = Date.now();
+let currentLang = 'en';
+
+const placeholders = {
+    en: "Type your message here...",
+    hi: "अपना संदेश यहाँ टाइप करें...",
+    kn: "ನಿಮ್ಮ ಸಂದೇಶವನ್ನು ಇಲ್ಲಿ ನಮೂದಿಸಿ..."
+};
+
+const greetings = {
+    en: "👋 Hello! I am your Health Chatbot. Please describe your symptoms (e.g., lump, pain, acne).",
+    hi: "👋 नमस्ते! मैं आपका हेल्थ चैटबॉट हूँ। कृपया अपने लक्षणों का वर्णन करें।",
+    kn: "👋 ನಮಸ್ಕಾರ! ನಾನು ನಿಮ್ಮ ಆರೋಗ್ಯ ಚಾಟ್‌ಬಾಟ್. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಲಕ್ಷಣಗಳನ್ನು ವಿವರಿಸಿ."
+};
+
+function setLanguage(lang) {
+    currentLang = lang;
+    document.getElementById("user-input").placeholder = placeholders[lang];
+    document.getElementById("chat-messages").innerHTML = "";
+    addMessage("bot", greetings[lang]);
+    updateProgress(0);
+}
+
+document.getElementById("language-select").addEventListener("change", function() {
+    setLanguage(this.value);
+});
+
+function addMessage(sender, text) {
+    const chat = document.getElementById("chat-messages");
+    const msgDiv = document.createElement("div");
+    msgDiv.classList.add("message", sender);
+    msgDiv.innerHTML = text.replace(/\n/g, "<br>");
+    chat.appendChild(msgDiv);
+    chat.scrollTop = chat.scrollHeight;
+}
+
+function updateProgress(value) {
+    document.getElementById("progress-bar").style.width = value + "%";
+}
+
+function sendMessage() {
+    const input = document.getElementById("user-input");
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    addMessage("user", msg);
+    input.value = "";
+
+    fetch("/get", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ msg: msg, user_id: userId, lang: currentLang })
+    })
+    .then(res => res.json())
+    .then(data => {
+        addMessage("bot", data.response);
+        updateProgress(data.progress || 0);
+    });
+}
+
+// Initialize
+setLanguage(currentLang);
+</script>
+</body>
+</html>
